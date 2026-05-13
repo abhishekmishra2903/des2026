@@ -1,0 +1,71 @@
+image: python:3.9-slim
+
+# Spin up a temporary Postgres DB for the pipeline
+services:
+  - name: postgres:13
+    alias: testdb
+
+# Define environment variables for the DB connection
+variables:
+  POSTGRES_DB: churn_db
+  POSTGRES_USER: runner
+  POSTGRES_PASSWORD: password
+  AWS_DEFAULT_REGION: us-east-1
+
+stages:
+  - setup
+  - verify_sql
+  - verify_orchestration
+  - deploy_production
+
+# Install dependencies once and cache them
+install_dependencies:
+  stage: setup
+  script:
+    - pip install -r requirements.txt
+
+# Pillar 1: Linting
+check_sql_quality:
+  stage: verify_sql
+  script:
+    - pip install sqlfluff
+    - echo "Running SQLFluff Linter..."
+    # The --dialect postgres flag tells it what rules to use
+    - sqlfluff lint sql_transformations/01_clean_data.sql --dialect postgres
+
+# Pillar 2: Orchestration Dry Runs
+validate_pipelines:
+  stage: verify_orchestration
+  script:
+    - pip install -r requirements.txt
+    - echo "Testing Dagster Asset Lineage..."
+    - dagster asset list -m dagster_assets.feature_engineering
+    - echo "Testing Airflow DAG Compilation..."
+    - python airflow_dags/model_training_dag.py
+
+# Pillar 3: Dummy Continuous Production Deployment
+deploy_to_aws_production:
+  stage: deploy_production
+  image: amazon/aws-cli
+
+  # Run only for main branch
+  only:
+    - main
+
+  script:
+    - echo "Starting Production Deployment..."
+    
+    # Dummy AWS authentication check
+    - aws sts get-caller-identity
+
+    # Example deployment commands
+    - echo "Uploading artifacts to S3..."
+    - aws s3 cp model_artifacts/ s3://dummy-mlops-bucket/model_artifacts/ --recursive
+
+    - echo "Triggering ECS service update..."
+    - echo "aws ecs update-service --cluster churn-cluster --service churn-api-service --force-new-deployment"
+
+    - echo "Deployment completed successfully!"
+
+  environment:
+    name: production
