@@ -1,0 +1,9 @@
+id,name,age,churn_status
+1,John Doe,28,0
+2,Jane Smith,34,1
+3,Alice Jones,,0
+4,Bob Brown,999,1
+5,Charlie Davis,45,0
+6,Eve White,,1
+7,Frank Miller,52,0
+1,John Doe,28,0

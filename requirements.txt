@@ -1,0 +1,7 @@
+sqlfluff
+pytest
+dagster
+apache-airflow
+pandas
+scikit-learn
+psycopg2-binary
